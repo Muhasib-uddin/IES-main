@@ -1,0 +1,142 @@
+﻿@using Microsoft.AspNetCore.Html
+@model HomeView
+@{
+    ViewData["Title"] = "Home";
+
+    IHtmlContent? documents = Html.Raw(JsonConvert.SerializeObject(Model.Documents));
+}
+
+@section css
+
+{
+    <style>
+        .product-item a {
+            color: #333333;
+            text-decoration: blink;
+        }
+
+        .pdf-info {
+            display: flex;
+            align-items: center; /* Vertically center items */
+            gap: 5px; /* Adjust the gap as needed */
+        }
+
+        .truncated-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100px; /* Adjust the maximum width as needed */
+        }
+    </style>
+}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.8.335/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.8.335/pdf.worker.min.js"></script>
+
+<div class="d-flex flex-column w-100 mt-5">
+    <h1 class="display-5 fw-normal mb-3">@Model.Title</h1>
+    <p class="mb-1">@Model.Description</p>
+
+    @* <div class="py-3">
+    @(Html.DevExtreme().List()
+    .DataSource(Model.Documents)
+    .DisplayExpr("DocumentName")
+    .OnItemClick("onItemClick"))
+    </div> *@
+    <div>
+
+    </div>
+    <script>
+        // Define the onItemClick function globally
+        const onItemClick = (documentLink) => {
+            window.open(documentLink, '_blank');
+        };
+    </script>
+    <div style="display: flex;">
+        @foreach (var itemData in Model.Documents)
+        {
+            var itemId = itemData.Id;
+            <div style="margin-left: 15px; margin-top: 10px; padding: 10px; background-color: #315B6F; max-width: 220px; border-radius: 10px" onclick="onItemClick('@itemData.DocumentLink')">
+                <div class="pdf-container-@itemId">
+                    <canvas class="pdf-preview-@itemId" width="100" height="100" style="border-radius: 10px"></canvas>
+                    <div style="display: flex">
+                        <div style="margin-right:5px; padding-top:6px">
+                            <img src="~/img/pdf.png" height="40" width="40" />
+                        </div>
+                        <div>
+                            <div>
+                                <p class="truncated-text">@itemData.DocumentName</p>
+                            </div>
+                            <div class="pdf-info-@itemId" style="display: flex; ">
+                                <p class="page-info-@itemId" style="font-weight: bold"></p>
+                                <p class="pdf-size-info-@itemId" style="font-weight: bold; margin-left:2px"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <script>
+                    (function () {
+                      
+                        const pdfContainer = document.querySelector('.pdf-container-@itemId');
+                        const canvas = pdfContainer.querySelector('.pdf-preview-@itemId');
+                        const pageInfo = pdfContainer.querySelector('.page-info-@itemId');
+                        const pdfSizeInfo = pdfContainer.querySelector('.pdf-size-info-@itemId');
+                        const pdfUrl = '@itemData.DocumentLink';
+
+                        // Initialize PDF.js
+                        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+
+                        // Load and render the PDF
+                        pdfjsLib.getDocument(pdfUrl).promise
+                            .then(function (pdfDoc) {
+                                const numPages = pdfDoc.numPages;
+                                pageInfo.textContent = `${numPages} pages . `;
+                                return pdfDoc.getPage(1);
+                            })
+                            .then(function (page) {
+                                const maxCanvasWidth = 200;
+                                const maxCanvasHeight = 150;
+                                const viewport = page.getViewport({ scale: 1 });
+                                const scaleX = Math.min(maxCanvasWidth / viewport.width, maxCanvasWidth / viewport.height);
+                                const scaleY = Math.min(maxCanvasHeight / viewport.width, maxCanvasHeight / viewport.height);
+
+                                const context = canvas.getContext('2d');
+
+                                canvas.height = viewport.height * scaleY;
+                                canvas.width = viewport.width * scaleX;
+
+                                const renderContext = {
+                                    canvasContext: context,
+                                    viewport: viewport,
+                                };
+
+                                return page.render(renderContext).promise;
+                            })
+                            .then(function () {
+                                // Once the rendering is complete, show the download link
+                                // Get PDF file size
+                                fetch(pdfUrl)
+                                    .then(response => response.headers.get('content-length'))
+                                    .then(size => {
+                                        pdfSizeInfo.textContent = `${Math.ceil(size / 1024)} KB . PDF`;
+                                    });
+                            })
+                            .catch(function (error) {
+                                console.error('Error rendering PDF:', error);
+                                pdfContainer.innerHTML = 'Error rendering PDF';
+                            });
+                        
+                    })();
+                    
+                </script>
+            </div>
+        }
+    </div>
+
+
+</div>
+
+@section script
+
+{
+     
+}
